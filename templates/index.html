@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+<style>
+body {
+    background-color: #471;
+    font-family: sans-serif;
+    color: #AC6;
+    padding: 0px;
+    margin: 0px;
+}
+div.container {
+    position: absolute;
+    width:  100%;
+    height: 100%;
+}
+div.container.ready {
+    cursor: pointer;
+}
+div.container.waiting {
+    cursor: progress;
+    background-color: #147;
+    color: #6AC;
+}
+div.container.error {
+    cursor: pointer;
+    background-color: #714;
+    color: #C6A;
+}
+div.flex-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+div.flex-container div.image {
+    flex-grow: 1;
+    width: 100%;
+    position: relative;
+}
+div.flex-container div.image img {
+    position: absolute;
+    height: 100%;
+    left: 0px;
+    right: 0px;
+    margin-right: auto;
+    margin-left: auto;
+}
+</style>
+</head>
+<body>
+<div class="container ready" id="shootButton">
+    <div class="flex-container">
+        <h1>Click anywhere to take photo.</h1>
+        <div id="log"></div>
+        <div class="image">
+            <img id="image" />
+        </div>
+    </div>
+</div>
+</body>
+
+<script type="text/javascript">
+
+(function(){
+"use strict"
+
+let button = document.getElementById('shootButton');
+let awaitingResult = false;
+
+function get_image(id, retry=0) {
+    fetch(`/image/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            if (data[id] === null && retry < 10) {
+                setTimeout(function(){get_image(id, retry+1);}, 1000);
+            } else if (data[id] !== null) {
+                document.getElementById('image').src = '/static/images/'+data[id].image
+            } else {
+                console.error("Ran out of time.");
+            }
+        })
+}
+
+function shoot() {
+    if (awaitingResult) {
+        return;
+    }
+    awaitingResult = true;
+    button.className = "container waiting";
+    fetch('/shoot')
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            if (data.success) {
+                button.className = "container ready";
+                get_image(data.id)
+            } else {
+                button.className = "container error";
+            }
+        })
+        .finally(() => {awaitingResult = false;});
+}
+
+button.addEventListener("click", shoot);
+
+})();
+</script>
+</html>
